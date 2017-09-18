@@ -8,3 +8,5 @@ http://www.linuxfromscratch.org/patches/blfs/7.5/lua-5.2.3-shared_library-1.patc
 http://rpm.org/releases/rpm-4.11.x/rpm-4.11.2.tar.bz2
 http://download.oracle.com/berkeley-db/db-6.0.20.tar.gz
 http://dev.gentoo.org/~blueness/eudev/eudev-1.6.tar.gz
+https://ftp.gnu.org/gnu/readline/readline-6.2.tar.gz
+http://www.linuxfromscratch.org/patches/lfs/7.5/readline-6.2-fixes-2.patch

@@ -1,7 +1,7 @@
 #
 #	System settings
 #
-%_topdir		/usr/src/Octothorpe
+%_topdir		/home/samuel/LFS-RPM
 #
 #	Build flags
 #
@@ -11,21 +11,21 @@
 #	Some standard locations
 #
 %_sysconfdir		/etc
-%_lib			/lib
-%_lib64			/lib64
-%_prefix		/usr
+%_lib				/lib
+%_lib64				/lib64
+%_prefix			/usr
 %_exec_prefix		/usr
-%_bindir		/usr/bin
-%_sbindir		/usr/sbin
-%_libdir		/usr/lib
-%_lib64dir		/usr/lib64
+%_bindir			/usr/bin
+%_sbindir			/usr/sbin
+%_libdir			/usr/lib
+%_lib64dir			/usr/lib64
 %_libexecdir		/usr/libexec
-%_datadir		/usr/share
-%_docdir		/usr/share/doc
+%_datadir			/usr/share
+%_docdir			/usr/share/doc
 %_includedir		/usr/include
-%_infodir		/usr/share/info
-%_mandir		/usr/share/man
+%_infodir			/usr/share/info
+%_mandir			/usr/share/man
 %_oldincludedir		/usr/include
 %_sharedstatedir	/var/lib
-%_var			/var
+%_var				/var
 %_localstatedir		/var

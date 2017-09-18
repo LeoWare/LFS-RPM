@@ -1,13 +1,13 @@
 Summary:	Linux API header files
 Name:		linux-api-headers
-Version:	3.13.3
+Version:	4.12.7
 Release:	1
 License:	GPLv2
 URL:		http://www.kernel.org/
 Group:		System Environment/Kernel
 Vendor:		Bildanet
 Distribution:	Octothorpe
-Source0:	http://www.kernel.org/pub/linux/kernel/v3.x/linux-%{version}.tar.xz
+Source0:	http://www.kernel.org/pub/linux/kernel/v4.x/linux-%{version}.tar.xz
 BuildArch:	noarch
 %description
 The Linux API Headers expose the kernel's API for use by Glibc.
@@ -26,6 +26,7 @@ find /%{buildroot}%{_includedir} \( -name .install -o -name ..install.cmd \) -de
 %{_includedir}/asm/*
 %{_includedir}/drm/*
 %{_includedir}/linux
+%{_includedir}/misc
 %{_includedir}/mtd/*
 %{_includedir}/rdma/*
 %{_includedir}/scsi/*
@@ -33,6 +34,7 @@ find /%{buildroot}%{_includedir} \( -name .install -o -name ..install.cmd \) -de
 %{_includedir}/video/*
 %{_includedir}/xen/*
 %changelog
+*	Mon Sep 18 2017 Samuel Raynor <samuel@samuelraynor.com> 4.12.7-1
 *	Sat Mar 22 2014 baho-utot <baho-utot@columbus.rr.com> 3.13.3-1
 *	Sat Aug 31 2013 baho-utot <baho-utot@columbus.rr.com> 3.10.10-1
 *	Sat Aug 24 2013 baho-utot <baho-utot@columbus.rr.com> 3.10.9-1

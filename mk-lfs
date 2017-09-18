@@ -30,16 +30,18 @@ if [ -d "${LFS}" ]; then	# we are not in chroot so build tools
 	su --login $USER <<- "EOF"
 		cd ~
 		source ~/.bashrc
-		cd ${LFS}/usr/src/Octothorpe
+		cd ${LFS}${PARENT}
+		pwd
 		./mk-tools
 	EOF
+	# Redundant... ???
 	[ ${EUID} -eq 0 ]	|| die "${PRGNAME}: Need to be root user: FAILURE"
 	cd ${LFS}${PARENT}	|| die "${PRGNAME}: Change directory: ${LFS}${PARENT}: FAILURE"
 	#
 	#	Setup the filesystem for chapter 06
 	#
 	[ -e "LOGS/filesystem.completed" ] || {
-		BLD="/tools/bin/rpmbuild -ba --nocheck --define \"_topdir ${LFS}/${PARENT}\" --define \"_dbpath ${LFS}/var/lib/rpm\" SPECS/filesystem.spec"
+		BLD="/tools/bin/rpmbuild -ba --nocheck --define \"_topdir ${LFS}${PARENT}\" --define \"_dbpath ${LFS}/var/lib/rpm\" SPECS/filesystem.spec"
 		RPMPKG="$(find RPMS -name 'filesystem-[0-9]*.rpm' -print)"
 		[ -z ${RPMPKG} ] && build "	Building filesystem" "${BLD}" "LOGS/filesystem.log"
 		RPMPKG="$(find RPMS -name 'filesystem-[0-9]*.rpm' -print)"
@@ -47,6 +49,7 @@ if [ -d "${LFS}" ]; then	# we are not in chroot so build tools
 		build "	Installing filesystem" "/tools/bin/rpm -Uvh --nodeps --root /mnt/lfs ${RPMPKG}" "LOGS/filesystem.completed"
 		build "	Creating symlinks: /tools/bin/{bash,cat,echo,pwd,stty}" "ln -fsv /tools/bin/{bash,cat,echo,pwd,stty} ${LFS}/bin"   "LOGS/filesystem.completed"
 		build "	Creating symlinks: /tools/bin/perl /usr/bin" "ln -fsv /tools/bin/perl ${LFS}/usr/bin" "LOGS/filesystem.completed"
+		build " Creating symlinks: /tools/lib/gcc /usr/lib/gcc" "ln -fsv /tools/lib/gcc ${LFS}/usr/lib/gcc" "LOGS/filesystem.completed"
 		build "	Creating symlinks: /tools/lib/libgcc_s.so{,.1}" "ln -fsv /tools/lib/libgcc_s.so{,.1} ${LFS}/usr/lib" "LOGS/filesystem.completed"
 		build "	Creating symlinks: /tools/lib/libstdc++.so{,.6} /usr/lib" "ln -fsv /tools/lib/libstdc++.so{,.6} ${LFS}/usr/lib"	 "LOGS/filesystem.completed"
 		build "	Sed: /usr/lib/libstdc++.la" "sed 's/tools/usr/' /tools/lib/libstdc++.la > ${LFS}/usr/lib/libstdc++.la" "LOGS/filesystem.completed"

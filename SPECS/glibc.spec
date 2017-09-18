@@ -1,6 +1,6 @@
 Summary:	Main C library
 Name:		glibc
-Version:	2.19
+Version:	2.26
 Release:	1
 License:	GPLv3
 URL:		http://www.gnu.org/software/libc
@@ -8,7 +8,7 @@ Group:		Applications/System
 Vendor:		Bildanet
 Distribution:	Octothorpe
 Source0:	http://ftp.gnu.org/gnu/glibc/%{name}-%{version}.tar.xz
-Patch0:		glibc-2.19-fhs-1.patch
+Patch0:		glibc-2.26-fhs-1.patch
 %description
 This library provides the basic routines for allocating memory,
 searching directories, opening and closing files, reading and
@@ -20,47 +20,66 @@ sed -i 's/\\$$(pwd)/`pwd`/' timezone/Makefile
 %patch0 -p1
 install -vdm 755 %{_builddir}/%{name}-build
 %build
+%ifarch x86_64
+	GCC_INCDIR=%{buildroot}%{_libdir}/gcc/x86_64-pc-linux-gnu/7.2.0/include
+	install -vdm 755 %{buildroot}/lib64
+	ln -sfv ../lib/ld-linux-x86-64.so.2 %{buildroot}/lib64
+	ln -sfv ../lib/ld-linux-x86-64.so.2 %{buildroot}/lib64/ld-lsb-x86-64.so.3
+%else
+	GCC_INCDIR=%{buildroot}%{_libdir}/gcc/$(uname -m)-pc-linux-gnu/7.2.0/include
+	ln -sfv ld-linux.so.2 /lib/ld-lsb.so.3
+%endif
+rm -rf %{buildroot}%{_includedir}limits.h
 cd %{_builddir}/%{name}-build
-../%{name}-%{version}/configure \
+	CC="gcc -isystem $GCC_INCDIR -isystem /usr/include" \
+	../%{name}-%{version}/configure \
 	--prefix=%{_prefix} \
-	--disable-profile \
-	--enable-kernel=2.6.32 \
-	--enable-obsolete-rpc \
-	--disable-silent-rules
+	--disable-werror \
+	--enable-kernel=3.2 \
+	--enable-stack-protector=strong \
+	libc_cv_slibdir=/lib
+unset GCC_INCDIR
+
 make %{?_smp_mflags}
 %check
 cd %{_builddir}/glibc-build
 make -k check > %{_topdir}/LOGS/%{name}-check.log 2>&1 || true
 %install
+#touch %{buildroot}%{_sysconfdir}/ld.so.conf
 #	Do not remove static libs
 cd %{_builddir}/glibc-build
+sed '/test-installation/s@$(PERL)@echo not running@' -i %{_builddir}/%{name}-build/Makefile
 #	Create directories
 make install_root=%{buildroot} install
 install -vdm 755 %{buildroot}%{_sysconfdir}/ld.so.conf.d
 install -vdm 755 %{buildroot}/var/cache/nscd
 install -vdm 755 %{buildroot}%{_libdir}/locale
 cp -v ../%{name}-%{version}/nscd/nscd.conf %{buildroot}%{_sysconfdir}/nscd.conf
+#	Install the system support files for ncsd
+install -v -Dm644 ../%{name}-%{version}/nscd/nscd.tmpfiles %{buildroot}%{_libdir}/tmpfiles.d/nscd.conf
+install -v -Dm644 ../%{name}-%{version}/nscd/nscd.service %{_lib}/systemd/system/nscd.service
 #	Install locale generation script and config file
 cp -v %{_topdir}/locale-gen.conf %{buildroot}%{_sysconfdir}
 cp -v %{_topdir}/locale-gen.sh %{buildroot}/sbin
 #	Remove unwanted cruft
-rm -rf %{buildroot}%{_infodir}
+#rm -rf %{buildroot}%{_infodir}
 #	Install configuration files
 cat > %{buildroot}%{_sysconfdir}/nsswitch.conf <<- "EOF"
-#	Begin /etc/nsswitch.conf
+# Begin /etc/nsswitch.conf
 
-	passwd: files
-	group: files
-	shadow: files
+passwd: files
+group: files
+shadow: files
 
-	hosts: files dns
-	networks: files
+hosts: files dns
+networks: files
 
-	protocols: files
-	services: files
-	ethers: files
-	rpc: files
-#	End /etc/nsswitch.conf
+protocols: files
+services: files
+ethers: files
+rpc: files
+
+# End /etc/nsswitch.conf
 EOF
 cat > %{buildroot}%{_sysconfdir}/ld.so.conf <<- "EOF"
 #	Begin /etc/ld.so.conf

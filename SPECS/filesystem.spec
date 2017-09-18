@@ -1,12 +1,12 @@
 Summary:	Default file system
 Name:		filesystem
-Version:	7.5
+Version:	8.1_systemd
 Release:	1
 License:	GPLv3
 Group:		System Environment/Base
-Vendor:		Bildanet
+Vendor:		Bonsai
 URL:		http://www.linuxfromscratch.org
-Distribution:	Octothorpe
+Distribution:	LFS
 %description
 The filesystem package is one of the basic packages that is installed
 on a Linux system. Filesystem contains the basic directory
@@ -19,21 +19,23 @@ for the directories.
 #	6.5.  Creating Directories
 #
 install -vdm 755 %{buildroot}/{dev,proc,run/lock,sys}
-install -vdm 755 %{buildroot}/{bin,boot,etc/{opt,sysconfig},home,lib,mnt,opt}
+install -vdm 755 %{buildroot}/{bin,boot,etc/{opt,sysconfig},home,lib/firmware,mnt,opt}
 install -vdm 755 %{buildroot}/{media/{floppy,cdrom},sbin,srv,var}
-install -dv -m 0750 %{buildroot}/root
-install -dv -m 1777 %{buildroot}/tmp %{buildroot}/var/tmp
+install -vdm 0750 %{buildroot}/root
+install -vdm 1777 %{buildroot}/tmp %{buildroot}/var/tmp
 install -vdm 755 %{buildroot}/usr/{,local/}{bin,include,lib,sbin,src}
 install -vdm 755 %{buildroot}/usr/{,local/}share/{color,dict,doc,info,locale,man}
 install -vdm 755 %{buildroot}/usr/{,local/}share/{misc,terminfo,zoneinfo}
 install -vdm 755 %{buildroot}/usr/libexec
 install -vdm 755 %{buildroot}/usr/{,local/}share/man/man{1..8}
-#	Symlinks for AMD64
+
+#	Symlinks for x86_64
 %ifarch x86_64
 	ln -sv lib %{buildroot}/lib64
 	ln -sv lib %{buildroot}/usr/lib64
 	ln -sv lib %{buildroot}/usr/local/lib64
 %endif
+
 install -vdm 755 %{buildroot}/var/{log,mail,spool}
 ln -sv ../run %{buildroot}/var/run
 ln -sv ../run/lock %{buildroot}/var/lock
@@ -41,20 +43,48 @@ install -vdm 755 %{buildroot}/var/{opt,cache,lib/{color,misc,locate},local}
 #
 #	6.6. Creating Essential Files and Symlinks
 #
+
+ln -sv /tools/bin/{bash,cat,dd,echo,ln,pwd,rm,stty} %{buildroot}/bin
+ln -sv /tools/bin/{install,perl} %{buildroot}/usr/bin
+ln -sv /tools/lib/libgcc_s.so{,.1} %{buildroot}/usr/lib
+ln -sv /tools/lib/libstdc++.{a,so{,.6}} %{buildroot}/usr/lib
+sed 's/tools/usr/' /tools/lib/libstdc++.la > %{buildroot}/usr/lib/libstdc++.la
+for lib in blkid lzma mount uuid
+do
+    ln -sv /tools/lib/lib$lib.{a,so*} %{buildroot}/usr/lib
+    sed 's/tools/usr/' /tools/lib/lib${lib}.la > %{buildroot}/usr/lib/lib${lib}.la
+done
+ln -sv bash %{buildroot}/bin/sh
+
 ln -sv /proc/self/mounts %{buildroot}/etc/mtab
 touch %{buildroot}/etc/mtab
-touch %{buildroot}/var/log/{btmp,lastlog,wtmp}
+touch %{buildroot}/var/log/{btmp,lastlog,faillog,wtmp}
+chgrp -v utmp %{buildroot}/var/log/lastlog
+chmod -v 664  %{buildroot}/var/log/lastlog
+chmod -v 600  %{buildroot}/var/log/btmp
+
 #
 #	Configuration files
 #
 cat > %{buildroot}/etc/passwd <<- "EOF"
-	root::0:0:root:/root:/bin/bash
+	root:x:0:0:root:/root:/bin/bash
 	bin:x:1:1:bin:/dev/null:/bin/false
+	daemon:x:6:6:Daemon User:/dev/null:/bin/false
+	messagebus:x:18:18:D-Bus Message Daemon User:/var/run/dbus:/bin/false
+	systemd-bus-proxy:x:72:72:systemd Bus Proxy:/:/bin/false
+	systemd-journal-gateway:x:73:73:systemd Journal Gateway:/:/bin/false
+	systemd-journal-remote:x:74:74:systemd Journal Remote:/:/bin/false
+	systemd-journal-upload:x:75:75:systemd Journal Upload:/:/bin/false
+	systemd-network:x:76:76:systemd Network Management:/:/bin/false
+	systemd-resolve:x:77:77:systemd Resolver:/:/bin/false
+	systemd-timesync:x:78:78:systemd Time Synchronization:/:/bin/false
+	systemd-coredump:x:79:79:systemd Core Dumper:/:/bin/false
 	nobody:x:99:99:Unprivileged User:/dev/null:/bin/false
 EOF
+
 cat > %{buildroot}/etc/group <<- "EOF"
 	root:x:0:
-	bin:x:1:
+	bin:x:1:daemon
 	sys:x:2:
 	kmem:x:3:
 	tape:x:4:
@@ -69,124 +99,94 @@ cat > %{buildroot}/etc/group <<- "EOF"
 	utmp:x:13:
 	usb:x:14:
 	cdrom:x:15:
+	adm:x:16:
+	messagebus:x:18:
+	systemd-journal:x:23:
+	input:x:24:
 	mail:x:34:
+	systemd-bus-proxy:x:72:
+	systemd-journal-gateway:x:73:
+	systemd-journal-remote:x:74:
+	systemd-journal-upload:x:75:
+	systemd-network:x:76:
+	systemd-resolve:x:77:
+	systemd-timesync:x:78:
+	systemd-coredump:x:79:
 	nogroup:x:99:
+	users:x:999:
 EOF
+
+# Why are we doing this again here?
 touch %{buildroot}/etc/mtab
+
 #
-#	7.2.2. Creating Network Interface Configuration Files"
+#	7.2.1. Creating Network Interface Configuration Files"
 #
-cat > %{buildroot}/etc/sysconfig/ifconfig.eth0 <<- "EOF"
-ONBOOT=yes
-IFACE=eth0
-SERVICE=ipv4-static
-IP=192.168.1.2
-GATEWAY=192.168.1.1
-PREFIX=24
-BROADCAST=255.255.255.0
+install -vdm 755 %{buildroot}/etc/systemd/network
+cat > %{buildroot}/etc/systemd/network/10-eth0-dhcp.network <<- "EOF"
+[Match]
+Name=eth0
+
+[Network]
+DHCP=ipv4
+
+[DHCP]
+UseDomains=true
 EOF
 #
-#	7.2.3. Creating the /etc/resolv.conf File"
+#	7.2.2. Creating the /etc/resolv.conf File"
 #
-cat > %{buildroot}/etc/resolv.conf <<- "EOF"
-# Begin /etc/resolv.conf
+ln -sfv /run/systemd/resolve/resolv.conf %{buildroot}/etc/resolv.conf
 
-domain example.com
-nameserver 192.168.1.1
-nameserver 192.168.1.1
+#
+#	7.2.3 Configuring the system hostname
+#
+echo "lfs" > %{buildroot}/etc/hostname
 
-# End /etc/resolv.conf
-EOF
 #
-#	7.3. Customizing the /etc/hosts File"
+#	7.2.4. Customizing the /etc/hosts File"
 #
-cat > %{buildroot}/etc/hosts <<- "EOF"
+cat > %{buildroot}/etc/hosts << "EOF"
 # Begin /etc/hosts (network card version)
 
-127.0.0.1	localhost
-127.0.0.2	lfs.example.com lfs
-192.168.1.2	lfs.example.com lfs
+127.0.0.1 localhost
+127.0.1.1 lfs.localhost lfs
+::1       localhost ip6-localhost ip6-loopback
+ff02::1   ip6-allnodes
+ff02::2   ip6-allrouters
 
 # End /etc/hosts (network card version)
 EOF
+
 #
-#	7.7.1. Configuring Sysvinit"
+#	7.5 Configuring the system clock
 #
-cat > %{buildroot}/etc/inittab <<- "EOF"
-# Begin /etc/inittab
-id:3:initdefault:
+#	uncomment if your hardware clock is set to local time
+#cat > %{buildroot}/etc/adjtime << "EOF"
+#0.0 0 0.0
+#0
+#LOCAL
+#EOF
 
-si::sysinit:/etc/rc.d/init.d/rc S
-
-l0:0:wait:/etc/rc.d/init.d/rc 0
-l1:S1:wait:/etc/rc.d/init.d/rc 1
-l2:2:wait:/etc/rc.d/init.d/rc 2
-l3:3:wait:/etc/rc.d/init.d/rc 3
-l4:4:wait:/etc/rc.d/init.d/rc 4
-l5:5:wait:/etc/rc.d/init.d/rc 5
-l6:6:wait:/etc/rc.d/init.d/rc 6
-
-ca:12345:ctrlaltdel:/sbin/shutdown -t1 -a -r now
-
-su:S016:once:/sbin/sulogin
-
-1:2345:respawn:/sbin/agetty --noclear tty1 9600
-2:2345:respawn:/sbin/agetty tty2 9600
-3:2345:respawn:/sbin/agetty tty3 9600
-4:2345:respawn:/sbin/agetty tty4 9600
-5:2345:respawn:/sbin/agetty tty5 9600
-6:2345:respawn:/sbin/agetty tty6 9600
-
-# End /etc/inittab
-EOF
 #
-#	7.8. Configuring the system hostname
+#	7.6. Configuring the Linux Console"
 #
-echo "HOSTNAME=lfs.example.com" > %{buildroot}/etc/sysconfig/network
-#
-#	7.9. Configuring the setclock Script"
-#
-cat > %{buildroot}/etc/sysconfig/clock <<- "EOF"
-# Begin /etc/sysconfig/clock
-
-UTC=1
-
-# Set this to any options you might need to give to hwclock,
-# such as machine hardware clock type for Alphas.
-CLOCKPARAMS=
-
-# End /etc/sysconfig/clock
-EOF
-#
-#	7.10. Configuring the Linux Console"
-#
-cat > %{buildroot}/etc/sysconfig/console <<- "EOF"
-# Begin /etc/sysconfig/console
-#       Begin /etc/sysconfig/console
-#       KEYMAP="us"
-#       FONT="lat1-16 -m utf8"
-#       FONT="lat1-16 -m 8859-1"
-#       KEYMAP_CORRECTIONS="euro2"
-#       UNICODE="1"
-#       LEGACY_CHARSET="iso-8859-1"
-# End /etc/sysconfig/console
-EOF
-#
-#	7.13. The Bash Shell Startup Files
-#
-cat > %{buildroot}/etc/profile <<- "EOF"
-# Begin /etc/profile
-
-#	export LANG=<ll>_<CC>.<charmap><@modifiers>
-#	export LANG=en_US.utf8
-
-# End /etc/profile
+cat > %{buildroot}/etc/vconsole.conf << "EOF"
+KEYMAP=us
+FONT=LatArCyrHeb
 EOF
 
 #
-#	7.14. Creating the /etc/inputrc File
+#	7.7 Configuring the system locale
 #
-cat > %{buildroot}/etc/inputrc <<- "EOF"
+cat > %{buildroot}/etc/locale.conf << "EOF"
+LANG=en_US.UTF-8
+EOF
+
+#
+#	7.8 Creating the /etc/inputrc file
+#
+cat > %{buildroot}/etc/inputrc << "EOF"
 # Begin /etc/inputrc
 # Modified by Chris Lynn <roryo@roryo.dynup.net>
 
@@ -229,25 +229,55 @@ set bell-style none
 
 # End /etc/inputrc
 EOF
+
 #
-#	8.2. Creating the /etc/fstab File
+#	7.9 Creating the /etc/shells file
+#
+cat > %{buildroot}/etc/shells << "EOF"
+# Begin /etc/shells
+
+/bin/sh
+/bin/bash
+
+# End /etc/shells
+EOF
+
+#
+#	7.10.1 Disabling the screen clearing at boot time
+#
+install -vdm 644 %{buildroot}/etc/systemd/system/getty@tty1.service.d
+
+cat > %{buildroot}/etc/systemd/system/getty@tty1.service.d/noclear.conf << EOF
+[Service]
+TTYVTDisallocate=no
+EOF
+
+#
+#	7.13. The Bash Shell Startup Files
+#
+cat > %{buildroot}/etc/profile <<- "EOF"
+# Begin /etc/profile
+
+#	export LANG=<ll>_<CC>.<charmap><@modifiers>
+#	export LANG=en_US.utf8
+
+# End /etc/profile
+EOF
+
+
+#
+#	8.2 Creating the /etc/fstab file
 #
 cat > %{buildroot}/etc/fstab <<- "EOF"
-#	Begin /etc/fstab
-#	hdparm -I /dev/sda | grep NCQ --> can use barrier
-#system		mnt-pt		type		options			dump fsck
-#/dev/sdxx	/		ext4	defaults,barrier,noatime,noacl,data=ordered 1 1
-#/dev/sdxx	/		ext4		defaults		1 1
-#/dev/sdxx	/boot		ext4		defaults		1 2
-#/dev/sdxx	swap		swap		pri=1			0 0
-proc		/proc		proc		nosuid,noexec,nodev	0 0
-sysfs		/sys		sysfs		nosuid,noexec,nodev	0 0
-devpts		/dev/pts	devpts		gid=5,mode=620		0 0
-tmpfs		/run		tmpfs		defaults		0 0
-devtmpfs	/dev		devtmpfs	mode=0755,nosuid	0 0
-#	mount points
-#tmpfs		/tmp		tmpfs		defaults		0 0
-#	End /etc/fstab
+# Begin /etc/fstab
+
+# file system  mount-point  type     options             dump  fsck
+#                                                              order
+
+#/dev/<xxx>     /            <fff>    defaults            1     1
+#/dev/<yyy>     swap         swap     pri=1               0     0
+
+# End /etc/fstab
 EOF
 #
 #	8.3.2. Configuring Linux Module Load Order
@@ -261,16 +291,27 @@ install uhci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i uhci_hcd ; true
 
 # End /etc/modprobe.d/usb.conf
 EOF
+
 #
 #		chapter 9.1. The End
 #
+cat > %{buildroot}/etc/os-release << "EOF"
+NAME="Linux From Scratch"
+VERSION="8.1-systemd"
+ID=lfs
+PRETTY_NAME="Linux From Scratch 8.1-systemd"
+VERSION_CODENAME="LFS"
+EOF
+
 echo %{version} > %{buildroot}/etc/lfs-release
+
 cat > %{buildroot}/etc/lsb-release <<- "EOF"
 DISTRIB_ID="Linux From Scratch"
-DISTRIB_RELEASE="7.5"
-DISTRIB_CODENAME="Octothorpe"
+DISTRIB_RELEASE="8.1-systemd"
+DISTRIB_CODENAME="LFS"
 DISTRIB_DESCRIPTION="Linux From Scratch"
 EOF
+
 %files
 %defattr(-,root,root)
 #	Root filesystem
@@ -296,22 +337,23 @@ EOF
 %dir /etc/opt
 %config(noreplace) /etc/fstab
 %config(noreplace) /etc/group
+%config(noreplace) /etc/hostname
 %config(noreplace) /etc/hosts
-%config(noreplace) /etc/inittab
 %config(noreplace) /etc/inputrc
 %config(noreplace) /etc/lfs-release
+%config(noreplace) /etc/locale.conf
 %config(noreplace) /etc/lsb-release
 %config(noreplace) /etc/mtab
+%config(noreplace) /etc/os-release
 %config(noreplace) /etc/passwd
 %config(noreplace) /etc/profile
 %config(noreplace) /etc/resolv.conf
+%config(noreplace) /etc/shells
 %dir /etc/modprobe.d
 %config(noreplace) /etc/modprobe.d/usb.conf
-%dir /etc/sysconfig
-%config(noreplace) /etc/sysconfig/clock
-%config(noreplace) /etc/sysconfig/console
-%config(noreplace) /etc/sysconfig/ifconfig.eth0
-%config(noreplace) /etc/sysconfig/network
+%config(noreplace) /etc/systemd/network/10-eth0-dhcp.network
+%config(noreplace) /etc/systemd/system/getty@tty1.service.d/noclear.conf
+%config(noreplace) /etc/vconsole.conf
 #	media filesystem
 %dir /media/cdrom
 %dir /media/floppy
@@ -383,7 +425,46 @@ EOF
 /var/lock
 /var/run
 /var/run/lock
-#	Symlinks for AMD64
+/bin/bash
+/bin/cat
+/bin/dd
+/bin/echo
+/bin/ln
+/bin/pwd
+/bin/rm
+/bin/sh
+/bin/stty
+
+/usr/bin/install
+/usr/bin/perl
+/usr/lib/libblkid.a
+/usr/lib/libblkid.la
+/usr/lib/libblkid.so
+/usr/lib/libblkid.so.1
+/usr/lib/libblkid.so.1.1.0
+/usr/lib/libgcc_s.so
+/usr/lib/libgcc_s.so.1
+/usr/lib/liblzma.a
+/usr/lib/liblzma.la
+/usr/lib/liblzma.so
+/usr/lib/liblzma.so.5
+/usr/lib/liblzma.so.5.2.3
+/usr/lib/libmount.a
+/usr/lib/libmount.la
+/usr/lib/libmount.so
+/usr/lib/libmount.so.1
+/usr/lib/libmount.so.1.1.0
+/usr/lib/libstdc++.a
+/usr/lib/libstdc++.la
+/usr/lib/libstdc++.so
+/usr/lib/libstdc++.so.6
+/usr/lib/libuuid.a
+/usr/lib/libuuid.la
+/usr/lib/libuuid.so
+/usr/lib/libuuid.so.1
+/usr/lib/libuuid.so.1.3.0
+/var/log/faillog
+#	Symlinks for x86_64
 %ifarch x86_64
 /lib64
 /usr/lib64

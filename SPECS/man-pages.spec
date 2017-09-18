@@ -1,6 +1,6 @@
 Summary:	Man pages
 Name:		man-pages
-Version:	3.59
+Version:	4.12
 Release:	1
 License:	GPLv2
 URL:		http://www.kernel.org/doc/man-pages
