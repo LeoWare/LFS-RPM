@@ -1,6 +1,6 @@
 Summary:	Compression and decompression routines
 Name:		zlib
-Version:	1.2.8
+Version:	1.2.11
 Release:	1
 URL:		http://www.zlib.net/
 License:	MIT
@@ -28,7 +28,7 @@ make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
 %files
 %defattr(-,root,root)
 %{_lib}/libz.so.1
-%{_lib}/libz.so.1.2.8
+%{_lib}/libz.so.1.2.11
 %{_includedir}/*.h
 %{_libdir}/libz.a
 %{_libdir}/libz.so

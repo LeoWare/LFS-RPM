@@ -1,13 +1,13 @@
 Summary:	Contains the GNU compiler collection
 Name:		gcc
-Version:	4.8.2
+Version:	7.2.0
 Release:	1
 License:	GPLv2
 URL:		http://gcc.gnu.org
 Group:		Development/Tools
 Vendor:		Bildanet
 Distribution:	Octothorpe
-Source:		http://ftp.gnu.org/gnu/gcc/%{name}-%{version}/%{name}-%{version}.tar.bz2
+Source:		http://ftp.gnu.org/gnu/gcc/%{name}-%{version}/%{name}-%{version}.tar.xz
 Provides:	libgcc_s.so.1
 Provides:       libgcc_s.so.1(GCC_3.0)
 Provides:       libgcc_s.so.1(GCC_3.3)
@@ -26,26 +26,21 @@ The GCC package contains the GNU compiler collection,
 which includes the C and C++ compilers.
 %prep
 %setup -q
-case `uname -m` in
-	i?86) sed -i 's/^T_CFLAGS =$/& -fomit-frame-pointer/' gcc/Makefile.in ;;
+case $(uname -m) in
+  x86_64)
+    sed -e '/m64=/s/lib64/lib/' \
+        -i.orig gcc/config/i386/t-linux64
+  ;;
 esac
-sed -i -e /autogen/d -e /check.sh/d fixincludes/Makefile.in
-mv -v libmudflap/testsuite/libmudflap.c++/pass41-frag.cxx{,.disable}
 install -vdm 755 ../gcc-build
 %build
 cd ../gcc-build
-SED=sed \
-../%{name}-%{version}/configure \
-	--prefix=%{_prefix} \
-	--enable-shared \
-	--enable-threads=posix \
-	--enable-__cxa_atexit \
-	--enable-clocale=gnu \
+SED=sed                               \
+../%{name}-%{version}/configure --prefix=%{_prefix}      \
 	--enable-languages=c,c++ \
-	--disable-multilib \
-	--disable-bootstrap \
-	--with-system-zlib \
-	--disable-silent-rules
+	--disable-multilib       \
+	--disable-bootstrap      \
+	--with-system-zlib
 make %{?_smp_mflags}
 %install
 cd ../gcc-build
@@ -54,9 +49,15 @@ find %{buildroot}%{_libdir} -name '*.la' -delete
 install -vdm 755 %{buildroot}/%_lib
 ln -sv %{_bindir}/cpp %{buildroot}/%{_lib}
 ln -sv gcc %{buildroot}%{_bindir}/cc
+install -v -dm755 %{buildroot}%{_libdir}/bfd-plugins
+ln -sfv ../../libexec/gcc/$(gcc -dumpmachine)/7.2.0/liblto_plugin.so \
+        %{buildroot}/usr/lib/bfd-plugins/
+
 install -vdm 755 %{buildroot}%{_datarootdir}/gdb/auto-load%{_lib}
 %ifarch x86_64
-	mv -v %{buildroot}%{_lib64dir}/*gdb.py %{buildroot}%{_datarootdir}/gdb/auto-load%{_lib}
+	# ToDo: LFS uses /usr/lib with symlinks to /usr/lib64. /usr/lib is coded into the programs
+	#mv -v %{buildroot}%{_lib64dir}/*gdb.py %{buildroot}%{_datarootdir}/gdb/auto-load%{_lib}
+	mv -v %{buildroot}%{_libdir}/*gdb.py %{buildroot}%{_datarootdir}/gdb/auto-load%{_lib}
 %else
 	mv -v %{buildroot}%{_libdir}/*gdb.py %{buildroot}%{_datarootdir}/gdb/auto-load%{_lib}
 %endif
@@ -100,6 +101,7 @@ make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
 %lang(id)%{_datarootdir}/locale/id/LC_MESSAGES/*.mo
 %lang(ja)%{_datarootdir}/locale/ja/LC_MESSAGES/*.mo
 %lang(nl)%{_datarootdir}/locale/nl/LC_MESSAGES/*.mo
+%lang(pt_BR)%{_datarootdir}/locale/pt_BR/LC_MESSAGES/*.mo
 %lang(ru)%{_datarootdir}/locale/ru/LC_MESSAGES/*.mo
 %lang(sr)%{_datarootdir}/locale/sr/LC_MESSAGES/*.mo
 %lang(sv)%{_datarootdir}/locale/sv/LC_MESSAGES/*.mo

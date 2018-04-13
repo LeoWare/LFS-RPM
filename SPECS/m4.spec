@@ -1,6 +1,6 @@
 Summary:	A macro processor
 Name:		m4
-Version:	1.4.17
+Version:	1.4.18
 Release:	1
 License:	GPLv3
 URL:		http://www.gnu.org/software/m4
@@ -14,14 +14,12 @@ The M4 package contains a macro processor
 %setup -q
 %build
 ./configure \
-	--prefix=%{_prefix} \
-	--disable-silent-rules
+	--prefix=%{_prefix}
 make %{?_smp_mflags}
 %install
 make DESTDIR=%{buildroot} install
 rm -rf %{buildroot}%{_infodir}
 %check
-sed -i -e '41s/ENOENT/& || errno == EINVAL/' tests/test-readlink.h
 make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
 %files
 %defattr(-,root,root)

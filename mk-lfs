@@ -92,13 +92,12 @@ else
 	#
 	msg "Building System"
 	LIST="linux-api-headers man-pages glibc tzdata adjust-tool-chain zlib file "
-	LIST+="binutils gmp mpfr mpc gcc test-gcc "
-	LIST+="sed bzip2 pkg-config ncurses shadow psmisc procps-ng e2fsprogs "
-	LIST+="coreutils iana-etc m4 flex bison grep readline bash bc libtool "
-	LIST+="gdbm inetutils perl autoconf automake diffutils gawk findutils "
-	LIST+="gettext groff xz grub less gzip iproute2 kbd kmod libpipeline "
-	LIST+="make patch sysklogd sysvinit tar texinfo udev util-linux man-db vim "
-	LIST+="bootscripts linux "
+	LIST+="readline m4 bc binutils gmp mpfr mpc gcc test-gcc "
+	LIST+="bzip2 pkg-config ncurses attr acl libcap sed shadow psmisc iana-etc bison "
+	LIST+="flex grep bash libtool gdbm gperf expat inetutils perl perl-xml-parser "
+	LIST+="intltool autoconf automake xz kmod gettext systemd procps-ng e2fsprogs "
+	LIST+="coreutils diffutils gawk findutils groff grub less gzip iproute2 kbd "
+	LIST+="libpipeline make patch dbus util-linux man-db tar texinfo vim "
 	#	The following packages comprise the package management system RPM
 	LIST+="elfutils nspr nss popt lua rpm " # chapter-config
 	for i in ${LIST}; do
@@ -146,7 +145,7 @@ else
 				RPMPKG=$(find RPMS -name "${i}-[0-9]*.rpm" -print)
 				[ -z $RPMPKG ] && die "installation error: rpm package not found\n"
 				case ${i} in
-					glibc | gmp | gcc | bzip2 | ncurses | util-linux | e2fsprogs | shadow | bison | perl | texinfo | vim | linux | udev | rpm)
+					glibc | readline | gmp | gcc | bzip2 | ncurses | util-linux | e2fsprogs | shadow | bison | perl | texinfo | vim | linux | udev | rpm)
 						build "Installing: ${i}" "rpm -Uvh --nodeps ${RPMPKG}" "LOGS/${i}.completed" ;;
 					*)	build "Installing: ${i}" "rpm -Uvh ${RPMPKG}" "LOGS/${i}.completed" ;;
 				esac

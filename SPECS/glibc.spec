@@ -16,53 +16,62 @@ writing files, string handling, pattern matching, arithmetic,
 and so on.
 %prep
 %setup -q
-sed -i 's/\\$$(pwd)/`pwd`/' timezone/Makefile
+#sed -i 's/\\$$(pwd)/`pwd`/' timezone/Makefile
 %patch0 -p1
 install -vdm 755 %{_builddir}/%{name}-build
+ln -sfv /tools/lib/gcc /usr/lib
 %build
 %ifarch x86_64
-	GCC_INCDIR=%{buildroot}%{_libdir}/gcc/x86_64-pc-linux-gnu/7.2.0/include
+	GCC_INCDIR=/usr/lib/gcc/x86_64-pc-linux-gnu/7.2.0/include
 	install -vdm 755 %{buildroot}/lib64
 	ln -sfv ../lib/ld-linux-x86-64.so.2 %{buildroot}/lib64
 	ln -sfv ../lib/ld-linux-x86-64.so.2 %{buildroot}/lib64/ld-lsb-x86-64.so.3
 %else
-	GCC_INCDIR=%{buildroot}%{_libdir}/gcc/$(uname -m)-pc-linux-gnu/7.2.0/include
-	ln -sfv ld-linux.so.2 /lib/ld-lsb.so.3
+	GCC_INCDIR=/usr/lib/gcc/$(uname -m)-pc-linux-gnu/7.2.0/include
+	ln -sfv ld-linux.so.2 %{buildroot}/lib/ld-lsb.so.3
 %endif
-rm -rf %{buildroot}%{_includedir}limits.h
+rm -f /usr/include/limits.h
 cd %{_builddir}/%{name}-build
-	CC="gcc -isystem $GCC_INCDIR -isystem /usr/include" \
-	../%{name}-%{version}/configure \
-	--prefix=%{_prefix} \
+CC="gcc -isystem $GCC_INCDIR -isystem /usr/include" \
+	../%{name}-%{version}/configure --prefix=%{_prefix} \
 	--disable-werror \
 	--enable-kernel=3.2 \
 	--enable-stack-protector=strong \
 	libc_cv_slibdir=/lib
 unset GCC_INCDIR
-
 make %{?_smp_mflags}
 %check
 cd %{_builddir}/glibc-build
 make -k check > %{_topdir}/LOGS/%{name}-check.log 2>&1 || true
 %install
-#touch %{buildroot}%{_sysconfdir}/ld.so.conf
 #	Do not remove static libs
 cd %{_builddir}/glibc-build
-sed '/test-installation/s@$(PERL)@echo not running@' -i %{_builddir}/%{name}-build/Makefile
+install -vdm 755 %{buildroot}%{_sysconfdir}
+cat > %{buildroot}%{_sysconfdir}/ld.so.conf <<- "EOF"
+#	Begin /etc/ld.so.conf
+	/usr/local/lib
+	/opt/lib
+	include /etc/ld.so.conf.d/*.conf
+EOF
+sed '/test-installation/s@$(PERL)@echo not running@' -i ../%{name}-%{version}/Makefile
 #	Create directories
 make install_root=%{buildroot} install
 install -vdm 755 %{buildroot}%{_sysconfdir}/ld.so.conf.d
+cp -v %{_builddir}/%{name}-%{version}/nscd/nscd.conf %{buildroot}%{_sysconfdir}/nscd.conf
 install -vdm 755 %{buildroot}/var/cache/nscd
+install -v -Dm644 %{_builddir}/%{name}-%{version}/nscd/nscd.tmpfiles %{buildroot}/usr/lib/tmpfiles.d/nscd.conf
+install -v -Dm644 %{_builddir}/%{name}-%{version}/nscd/nscd.service %{buildroot}/lib/systemd/system/nscd.service
+
 install -vdm 755 %{buildroot}%{_libdir}/locale
-cp -v ../%{name}-%{version}/nscd/nscd.conf %{buildroot}%{_sysconfdir}/nscd.conf
-#	Install the system support files for ncsd
-install -v -Dm644 ../%{name}-%{version}/nscd/nscd.tmpfiles %{buildroot}%{_libdir}/tmpfiles.d/nscd.conf
-install -v -Dm644 ../%{name}-%{version}/nscd/nscd.service %{_lib}/systemd/system/nscd.service
+
 #	Install locale generation script and config file
 cp -v %{_topdir}/locale-gen.conf %{buildroot}%{_sysconfdir}
 cp -v %{_topdir}/locale-gen.sh %{buildroot}/sbin
 #	Remove unwanted cruft
-#rm -rf %{buildroot}%{_infodir}
+# this links to /lib/ld-2.6.so, we want this to link to ld-lsb instead.
+# leaving this file conflicts on installation on x86_64
+rm -f %{buildroot}%{_lib}/ld-linux-x86-64.so.2
+rm -rf %{buildroot}%{_infodir}
 #	Install configuration files
 cat > %{buildroot}%{_sysconfdir}/nsswitch.conf <<- "EOF"
 # Begin /etc/nsswitch.conf
@@ -81,23 +90,27 @@ rpc: files
 
 # End /etc/nsswitch.conf
 EOF
-cat > %{buildroot}%{_sysconfdir}/ld.so.conf <<- "EOF"
-#	Begin /etc/ld.so.conf
-	/usr/local/lib
-	/opt/lib
-	include /etc/ld.so.conf.d/*.conf
-EOF
+
 %post
+# locale-gen.sh depends on sed
+# sed is not present when building from the toolchain
+# which hasn't been installed yet
+# if /bin/sed isn't present, create a link to the toolchain version
+[ -e /bin/sed ] || ln -sv /tools/bin/sed /bin
 printf "Creating ldconfig cache\n";/sbin/ldconfig
 printf "Creating locale files\n";/sbin/locale-gen.sh
+# if we had to link to the toolchain sed, remove the link now
+[ -h /bin/sed ] && rm -f /bin/sed
 %files
 %defattr(-,root,root)
 %dir %{_localstatedir}/cache/nscd
 %dir %{_libdir}/locale
 %{_sysconfdir}/*
 %ifarch x86_64
+%{_lib}/*
+%{_libdir}/*
 %{_lib64}/*
-%{_lib64dir}/*
+#%{_lib64dir}/*
 %else
 %{_lib}/*
 %endif

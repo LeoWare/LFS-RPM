@@ -1,6 +1,6 @@
 Summary:	Contains a utility for determining file types
 Name:		file
-Version:	5.17
+Version:	5.31
 Release:	1
 License:	Other
 URL:		http://www.darwinsys.com/file
@@ -14,13 +14,11 @@ given file or files
 %prep
 %setup -q
 %build
-./configure \
-	--prefix=%{_prefix} \
-	--disable-silent-rules
+./configure --prefix=%{_prefix}
 make %{?_smp_mflags}
 %install
 make DESTDIR=%{buildroot} install
-find %{buildroot}%{_libdir} -name '*.la' -delete
+#find %{buildroot}%{_libdir} -name '*.la' -delete
 %check
 make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
 %post	-p /sbin/ldconfig

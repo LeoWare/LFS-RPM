@@ -1,6 +1,6 @@
 Summary:	Contains a linker, an assembler, and other tools
 Name:		binutils
-Version:	2.24
+Version:	2.29
 Release:	1
 License:	GPLv2
 URL:		http://www.gnu.org/software/binutils
@@ -13,21 +13,23 @@ The Binutils package contains a linker, an assembler,
 and other tools for handling object files.
 %prep
 %setup -q
-rm -fv etc/standards.info
-sed -i.bak '/^INFO/s/standards.info //' etc/Makefile.in
+#rm -fv etc/standards.info
+#sed -i.bak '/^INFO/s/standards.info //' etc/Makefile.in
 %build
 install -vdm 755 ../binutils-build
 cd ../binutils-build
-../%{name}-%{version}/configure \
-	--prefix=%{_prefix} \
-	--enable-shared \
-	--disable-silent-rules
+../%{name}-%{version}/configure --prefix=%{_prefix}       \
+             --enable-gold       \
+             --enable-ld=default \
+             --enable-plugins    \
+             --enable-shared     \
+             --disable-werror    \
+             --with-system-zlib
 make %{?_smp_mflags} tooldir=%{_prefix}
 %install
 cd ../binutils-build
 make DESTDIR=%{buildroot} tooldir=%{_prefix} install
 find %{buildroot} -name '*.la' -delete
-# Don't remove libiberity.a
 rm -rf %{buildroot}/%{_infodir}
 %check
 cd ../binutils-build
@@ -47,6 +49,7 @@ make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
 %{_libdir}/ldscripts/*
 #	Internationalization
 %lang(bg)%{_datarootdir}/locale/bg/LC_MESSAGES/*.mo
+%lang(ca)%{_datarootdir}/locale/ca/LC_MESSAGES/*.mo
 %lang(da)%{_datarootdir}/locale/da/LC_MESSAGES/*.mo
 %lang(de)%{_datarootdir}/locale/de/LC_MESSAGES/*.mo
 %lang(eo)%{_datarootdir}/locale/eo/LC_MESSAGES/*.mo
@@ -55,6 +58,7 @@ make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
 %lang(fr)%{_datarootdir}/locale/fr/LC_MESSAGES/*.mo
 %lang(ga)%{_datarootdir}/locale/ga/LC_MESSAGES/*.mo
 %lang(hr)%{_datarootdir}/locale/hr/LC_MESSAGES/*.mo
+%lang(hu)%{_datarootdir}/locale/hu/LC_MESSAGES/*.mo
 %lang(id)%{_datarootdir}/locale/id/LC_MESSAGES/*.mo
 %lang(it)%{_datarootdir}/locale/it/LC_MESSAGES/*.mo
 %lang(ja)%{_datarootdir}/locale/ja/LC_MESSAGES/*.mo

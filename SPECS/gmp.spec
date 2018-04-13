@@ -1,6 +1,6 @@
 Summary:	Math libraries
 Name:		gmp
-Version:	5.1.3
+Version:	6.1.2
 Release:	1
 License:	GPLv3
 URL:		http://www.gnu.org/software/gmp
@@ -15,21 +15,23 @@ for arbitrary precision arithmetic.
 %setup -q
 %build
 %ifarch i386 i486 i586 i686
-	ABI=32 ./configure \
-	--prefix=%{_prefix} \
-	--enable-cxx \
-	--disable-silent-rules
+	ABI=32 ./configure --prefix=/usr    \
+	--enable-cxx     \
+	--disable-static \
+	--docdir=/usr/share/doc/%{name}-%{version}
 %else
-	./configure \
-	--prefix=%{_prefix} \
-	--enable-cxx \
-	--disable-silent-rules
+	./configure --prefix=/usr    \
+	--enable-cxx     \
+	--disable-static \
+	--docdir=/usr/share/doc/%{name}-%{version}
 %endif
 make %{?_smp_mflags}
+make %{?_smp_mflags} html
 %install
 make DESTDIR=%{buildroot} install
+make DESTDIR=%{buildroot} install-html
 install -vdm 755 %{buildroot}%{_defaultdocdir}/%{name}-%{version}
-cp    -v doc/{isa_abi_headache,configuration} doc/*.html %{buildroot}%{_defaultdocdir}/%{name}-%{version}
+cp -rv doc/{isa_abi_headache,configuration} doc/*.html %{buildroot}%{_defaultdocdir}/%{name}-%{version}
 find %{buildroot}%{_libdir} -name '*.la' -delete
 rm -rf %{buildroot}%{_infodir}
 %check

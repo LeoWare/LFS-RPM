@@ -1,6 +1,6 @@
 Summary:	Command-line editing and history capabilities
 Name:		readline
-Version:	6.2
+Version:	7.0
 Release:	1
 License:	GPLv3
 URL:		http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
@@ -8,7 +8,6 @@ Group:		Applications/System
 Vendor:		Bildanet
 Distribution:	Octothorpe
 Source:		http://ftp.gnu.org/gnu/readline/%{name}-%{version}.tar.gz
-Patch:		http://www.linuxfromscratch.org/patches/lfs/7.5/readline-6.2-fixes-2.patch
 %description
 The Readline package is a set of libraries that offers command-line
 editing and history capabilities.
@@ -16,14 +15,13 @@ editing and history capabilities.
 %setup -q
 sed -i '/MV.*old/d' Makefile.in
 sed -i '/{OLDSUFF}/c:' support/shlib-install
-%patch -p1
 %build
-./configure \
-	--prefix=%{_prefix} \
-	--disable-silent-rules
-make %{?_smp_mflags} SHLIB_LIBS=-lncurses
+./configure --prefix=/usr    \
+	--disable-static \
+	--docdir=/usr/share/doc/readline-7.0
+make %{?_smp_mflags} SHLIB_LIBS="-L/tools/lib -lncursesw"
 %install
-make DESTDIR=%{buildroot} install
+make SHLIB_LIBS="-L/tools/lib -lncursesw" DESTDIR=%{buildroot} install
 install -vdm 755 %{buildroot}%{_lib}
 mv -v %{buildroot}%{_libdir}/lib{readline,history}.so.* %{buildroot}%{_lib}
 ln -sfv ../..%{_lib}/$(readlink %{buildroot}%{_libdir}/libreadline.so) %{buildroot}%{_libdir}/libreadline.so
@@ -40,7 +38,6 @@ rm -rf %{buildroot}%{_infodir}
 %{_libdir}/*
 %{_mandir}/*/*
 %{_defaultdocdir}/%{name}-%{version}/*
-%{_datarootdir}/%{name}/*
 %changelog
 *	Wed Jan 30 2013 baho-utot <baho-utot@columbus.rr.com> 6.2-1
 -	Initial build.	First version

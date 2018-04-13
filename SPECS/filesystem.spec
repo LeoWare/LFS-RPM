@@ -46,8 +46,7 @@ install -vdm 755 %{buildroot}/var/{opt,cache,lib/{color,misc,locate},local}
 
 ln -sv /tools/bin/{bash,cat,dd,echo,ln,pwd,rm,stty} %{buildroot}/bin
 ln -sv /tools/bin/{install,perl} %{buildroot}/usr/bin
-ln -sv /tools/lib/libgcc_s.so{,.1} %{buildroot}/usr/lib
-ln -sv /tools/lib/libstdc++.{a,so{,.6}} %{buildroot}/usr/lib
+
 sed 's/tools/usr/' /tools/lib/libstdc++.la > %{buildroot}/usr/lib/libstdc++.la
 for lib in blkid lzma mount uuid
 do
@@ -312,6 +311,11 @@ DISTRIB_CODENAME="LFS"
 DISTRIB_DESCRIPTION="Linux From Scratch"
 EOF
 
+%post
+# these lines moved from above to %post. these files conflict with gcc later on.
+ln -sv /tools/lib/libgcc_s.so{,.1} /usr/lib
+ln -sv /tools/lib/libstdc++.{a,so{,.6}} /usr/lib
+
 %files
 %defattr(-,root,root)
 #	Root filesystem
@@ -442,8 +446,8 @@ EOF
 /usr/lib/libblkid.so
 /usr/lib/libblkid.so.1
 /usr/lib/libblkid.so.1.1.0
-/usr/lib/libgcc_s.so
-/usr/lib/libgcc_s.so.1
+#/usr/lib/libgcc_s.so
+#/usr/lib/libgcc_s.so.1
 /usr/lib/liblzma.a
 /usr/lib/liblzma.la
 /usr/lib/liblzma.so
@@ -454,10 +458,10 @@ EOF
 /usr/lib/libmount.so
 /usr/lib/libmount.so.1
 /usr/lib/libmount.so.1.1.0
-/usr/lib/libstdc++.a
+#/usr/lib/libstdc++.a
 /usr/lib/libstdc++.la
-/usr/lib/libstdc++.so
-/usr/lib/libstdc++.so.6
+#/usr/lib/libstdc++.so
+#/usr/lib/libstdc++.so.6
 /usr/lib/libuuid.a
 /usr/lib/libuuid.la
 /usr/lib/libuuid.so

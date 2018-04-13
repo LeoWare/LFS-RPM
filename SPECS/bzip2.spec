@@ -8,7 +8,7 @@ Group:		LFS/Base
 Vendor:		Bildanet
 Distribution:	Octothorpe
 Source:		http://www.bzip.org/%{version}/%{name}-%{version}.tar.gz
-Patch0:		http://www.linuxfromscratch.org/patches/lfs/7.2/bzip2-1.0.6-install_docs-1.patch
+Patch0:		http://www.linuxfromscratch.org/patches/lfs/8.1/bzip2-1.0.6-install_docs-1.patch
 %description
 The Bzip2 package contains programs for compressing and
 decompressing files.  Compressing text files with bzip2 yields a much better

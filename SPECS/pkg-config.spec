@@ -1,6 +1,6 @@
 Summary:	Build tool
 Name:		pkg-config
-Version:	0.28
+Version:	0.29.2
 Release:	1
 License:	GPLv2
 URL:		http://www.freedesktop.org/wiki/Software/pkg-config
@@ -14,12 +14,10 @@ to build tools during the configure and make file execution.
 %prep
 %setup -q
 %build
-./configure \
-	--prefix=%{_prefix} \
-	--with-internal-glib \
-	--disable-host-tool \
-	--docdir=%{_defaultdocdir}/%{name}-%{version} \
-	--disable-silent-rules
+./configure --prefix=%{_prefix}              \
+            --with-internal-glib       \
+            --disable-host-tool        \
+            --docdir=%{_docdir}/%{name}-%{version}
 make %{?_smp_mflags}
 %install
 make DESTDIR=%{buildroot} install
@@ -32,5 +30,5 @@ make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
 %{_defaultdocdir}/%{name}-%{version}/*
 %{_mandir}/*/*
 %changelog
-*	Wed Mar 21 2013 baho-utot <baho-utot@columbus.rr.com> 0.28-1
+*	Wed Mar 20 2013 baho-utot <baho-utot@columbus.rr.com> 0.28-1
 -	Upgrade version
