@@ -1,41 +1,42 @@
-Summary:	Bourne-Again SHell
+Summary:	The Bash package contains the Bourne-Again SHell.
 Name:		bash
-Version:	4.2
+Version:	4.4.18
 Release:	1
 License:	GPLv3
-URL:		http://www.gnu.org/software/bash/
+URL:		Any
 Group:		LFS/Base
-Vendor:		Bildanet
-Distribution:	Octothorpe
-Source0:	http://ftp.gnu.org/gnu/bash/%{name}-%{version}.tar.gz
-Patch0:		http://www.linuxfromscratch.org/patches/lfs//development/bash-4.2-fixes-12.patch
-Provides:	/bin/sh
-Provides:	/bin/bash
+Vendor:		Octothorpe
+Source0:	http://ftp.gnu.org/gnu/%{name}/%{name}-%{version}.tar.gz
 %description
-The package contains the Bourne-Again SHell
+	The Bash package contains the Bourne-Again SHell.
 %prep
-%setup -q
-%patch0 -p1
+%setup -q -n %{NAME}-%{VERSION}
 %build
-./configure \
-	--prefix=%{_prefix} \
-	--bindir=/bin \
-	--htmldir=%{_defaultdocdir}/%{name}-%{version} \
-	--without-bash-malloc \
-	--with-installed-readline \
-	--disable-silent-rules
-make %{?_smp_mflags}
+	./configure \
+		--prefix=%{_prefix} \
+		--docdir=%{_docdir}/%{NAME}-%{VERSION} \
+		--without-bash-malloc \
+		--with-installed-readline
+	make %{?_smp_mflags}
 %install
-make DESTDIR=%{buildroot} install
-ln -s bash %{buildroot}/bin/sh
-%find_lang %{name}
-rm -rf %{buildroot}/%{_infodir}
-%files -f %{name}.lang
-%defattr(-,root,root)
-/bin/*
-%{_defaultdocdir}/%{name}-%{version}/*
-%{_mandir}/*/*
+	make DESTDIR=%{buildroot} install
+	install -vdm 755 %{buildroot}/bin
+	mv -vf %{buildroot}%{_bindir}/bash %{buildroot}/bin
+	ln -vs bash %{buildroot}/bin/sh
+	#	Copy license/copying file
+	install -D -m644 COPYING %{buildroot}/usr/share/licenses/%{name}/LICENSE
+	#	Create file list
+	rm  %{buildroot}%{_infodir}/dir
+	find %{buildroot} -name '*.la' -delete
+	find "${RPM_BUILD_ROOT}" -not -type d -print > filelist.rpm
+	sed -i "s|^${RPM_BUILD_ROOT}||" filelist.rpm
+	sed -i '/man\/man/d' filelist.rpm
+	sed -i '/\/usr\/share\/info/d' filelist.rpm
+%clean
+%files -f filelist.rpm
+	%defattr(-,root,root)
+	%{_infodir}/*.gz
+	%{_mandir}/man1/*.gz
 %changelog
-*	Sun May 19 2013 baho-utot <baho-utot@columbus.rr.com> 4.2-1
--	Upgrade version
-
+*	Tue Jan 09 2018 baho-utot <baho-utot@columbus.rr.com> 4.4.18-1
+-	Initial build.	First version

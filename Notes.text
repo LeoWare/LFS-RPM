@@ -1,0 +1,131 @@
+
+The next step is configuring your build, inside the untarred directory you do make defconfig. 
+This will generate a default config for your current cpu architecture and put it in .config. 
+You can edit it directly with a text editor but it's much better to do it with an interface by doing
+make nconfig (this needs libncurses5-dev on Ubuntu) because it also deals with dependencies of enabled features. 
+Here you can enable/disable features and device drivers with the spacebar. * means that it will be compiled in your kernel image. 
+M means it will be compiled inside a seprate kernel module.
+This is a part of the kernel that will be put in a seperate file and can be loaded in or out dynamically in the kernel when they are required. 
+The default config will do just fine for basic stuff like running in a virtual machine. 
+But in our case, we don't really want to deal with kernel modules so we'll just do this: sed "s/=m/=y/" -i .config. 
+And we're done, so we can simply do make to build our kernel. 
+Don't forget to add -jN with N the number of cores because this might take a while. 
+When it's done, it should tell you where your finished kernel is placed. 
+This is usually arch/x86/boot/bzImage in the linux source directory for Intel computers.
+
+Other useful/interesting ways to configure the kernel are:
+
+make localmodconfig will look at the modules that are currently loaded in the running kernel and change the config so that only those are enabled as module. 
+Useful for when you only want to build the things you need without having to figure out what that is. 
+So you can install something like Ubuntu on the machine first, copy the config to your build machine, usually located in /boot,
+	Arch Linux has it in gzipped at /proc/config.gz). 
+Do lsmod > /tmp/lsmodfile, transfer this file to you build machine and run LSMOD=lsmodfile make localmodconfig there after you created .config. 
+And you end up with a kernel that is perfectly tailored to your machine. 
+But this has a huge disadvantage, your kernel only supports what you were using at the time. 
+If you insert a usb drive it might not work because you weren't using the kernel module for fat32 support at the time.
+
+    make localyesconfigis the same as above but everything gets compiled in the kernel instead as a kernel module.
+
+    make allmodconfig generates a new config where all options are enabled and as much as possible as module.
+
+    make allyesconfigis same as above but with everything compiled in the kernel.
+
+    make randconfig generates a random config...
+
+You can check out make help for more info.
+
+
+FIX:
+
++ /usr/bin/rm -rf /mnt/lfs/usr/src/Octothorpe/BUILDROOT/tools-gcc-pass-2-7.3.0-1.x86_64
++ exit 0
+Preparing...                          ########################################
+	file /tools/lib/libcc1.so.0.0.0 from install of tools-gcc-pass-2-7.3.0-1.x86_64 conflicts with file from package tools-gcc-pass-1-7.3.0-1.x86_64
+	file /tools/lib/libstdc++.a from install of tools-gcc-pass-2-7.3.0-1.x86_64 conflicts with file from package tools-libstdc-7.3.0-1.x86_64
+	file /tools/lib/libstdc++.so.6.0.24 from install of tools-gcc-pass-2-7.3.0-1.x86_64 conflicts with file from package tools-libstdc-7.3.0-1.x86_64
+	file /tools/lib/libstdc++fs.a from install of tools-gcc-pass-2-7.3.0-1.x86_64 conflicts with file from package tools-libstdc-7.3.0-1.x86_64
+	file /tools/lib/libsupc++.a from install of tools-gcc-pass-2-7.3.0-1.x86_64 conflicts with file from package tools-libstdc-7.3.0-1.x86_64
+Preparing...                          ########################################
+Updating / installing...
+tools-gcc-pass-2-7.3.0-1              ########################################
+
+What exactly are these messages about? I don't recall seeing them before.
+
+dmesg | grep 'used greatest stack depth'
+
+Code:
+
+[    0.132082] kworker/u16:0 (42) used greatest stack depth: 14040 bytes left
+[    1.056243] kworker/u16:5 (1235) used greatest stack depth: 13016 bytes left
+[    1.701475] systemd-fstab-g (1259) used greatest stack depth: 12840 bytes left
+[   10.345022] systemd-udevd (2024) used greatest stack depth: 11696 bytes left
+
+You have stack instrumentation turned on in your kernel. These are benign until you hit 0 stack.
+
+It's enabled by CONFIG_DEBUG_STACK_USAGE in the debug options in your kernel config.
+
+Load LOOP kernel module
+
+enable info files
+rm -rf %{buildroot}/usr/share/info/dir
+%post
+	pushd /usr/share/info
+	rm -v dir
+	for f in *
+		do install-info $f dir 2>/dev/null
+	done
+	popd
+
+
+Change optimization flags:
+%define		_optflags	-march=x86-64 -mtune=generic -O2 -pipe -fPIC
+
+
+Move configure file to filesystem
+
+Allow post processing by rpmbuild
+
+NON-STANDARD
+procps-ng
+
+#	RPM add user
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+Requires(postun): /usr/sbin/userdel
+
+%pre
+/usr/bin/getent group myservice || /usr/sbin/groupadd -r myservice
+/usr/bin/getent passwd myservice || /usr/sbin/useradd -r -d /path/to/program -s /sbin/nologin myservice
+
+%postun
+/usr/sbin/userdel myservice
+
+#	Grub install
+	This is one way to install grub,
+	You will need to edit the set root=(hdx,x) and
+	root=/dev/sdxx lines to suit.
+	If you don't have a boot partition you will need to
+	change: linux /vmlinuz-<VERSION> root=/dev/sdxx ro
+	to:	linux /boot/vmlinux-<VERSION> root=/dev/sdxx> ro
+
+	grub-install --boot-directory=/mnt/lfs/boot /dev/sda
+
+	cat > /boot/grub/grub.cfg << "EOF"
+	# Begin /boot/grub/grub.cfg
+	set default=0
+	set timeout=5
+	insmod ext2
+	#	change hdx,x to the correct value
+	set root=(hdx,x)
+	menuentry "GNU/Linux Linux from scratch" {
+		linux /boot/vmlinuz-<VERSION> root=</dev/sdxx ro
+	 }
+	# 	Uncomment this if you have Win what-ever installed
+	#	change set root=(hdx,x) to where you have win installed
+	#	set root=(hd0,1) usually
+ 	#menuentry "Windows" {
+	#	insmod ntfs
+	#	set root=(hdx,x)
+	#	chainloader +1
+	# }
+	# End /boot/grub/grub.cfg
+	 EOF

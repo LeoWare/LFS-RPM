@@ -1,40 +1,38 @@
-Summary:	Functions for multiple precision math
-Name:		mpfr
-Version:	3.1.2
-Release:	1
-License:	GPLv3
-URL:		http://www.mpfr.org
-Group:		Applications/System
-Vendor:		Bildanet
-Distribution:	Octothorpe
-Source:		http://www.mpfr.org/%{name}-%{version}/%{name}-%{version}.tar.xz
+Summary:		The MPFR package contains functions for multiple precision math.
+Name:			mpfr
+Version:		4.0.1
+Release:		1
+License:		GPLv3
+URL:			Any
+Group:			LFS/Base
+Source0:		http://www.mpfr.org/%{name}-%{version}/%{name}-%{version}.tar.xz
 %description
-The MPFR package contains functions for multiple precision math.
+	The MPFR package contains functions for multiple precision math.
 %prep
-%setup -q
+%setup -q -n %{NAME}-%{VERSION}
 %build
-./configure \
-	--prefix=%{_prefix} \
-	--enable-thread-safe \
-	--docdir=%{_defaultdocdir}/%{name}-%{version} \
-	--disable-silent-rules
-make %{?_smp_mflags}
+	./configure \
+		--prefix=%{_prefix} \
+		--disable-static \
+		--enable-thread-safe \
+		--docdir=%{_docdir}/%NAME}-%{VERSION}
+	make %{?_smp_mflags}
+	make %{?_smp_mflags} html
 %install
-make DESTDIR=%{buildroot} install
-find %{buildroot}%{_libdir} -name '*.la' -delete
-rm -rf %{buildroot}%{_infodir}
-%check
-make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
-%post	-p /sbin/ldconfig
-%postun	-p /sbin/ldconfig
-%files
-%defattr(-,root,root)
-%{_includedir}/*.h
-%{_libdir}/*.a
-%{_libdir}/*.so
-%{_libdir}/*.so.*
-%{_defaultdocdir}/%{name}-%{version}/*
+	make DESTDIR=%{buildroot} install
+	make DESTDIR=%{buildroot} install-html
+	#	Copy license/copying file
+	install -D -m644 COPYING %{buildroot}/usr/share/licenses/%{name}/LICENSE
+	#	Create file list
+	rm  %{buildroot}%{_infodir}/dir
+	find %{buildroot} -name '*.la' -delete
+	find "${RPM_BUILD_ROOT}" -not -type d -print > filelist.rpm
+	sed -i "s|^${RPM_BUILD_ROOT}||" filelist.rpm
+	sed -i '/man\/man/d' filelist.rpm
+	sed -i '/\/usr\/share\/info/d' filelist.rpm
+%files -f filelist.rpm
+	%defattr(-,root,root)
+	%{_infodir}/*.gz
 %changelog
-*	Sat Apr 20 2013 baho-utot <baho-utot@columbus.rr.com> 3.1.2-1
-*	Wed Jan 30 2013 baho-utot <baho-utot@columbus.rr.com> 3.1.1-1
+*	Tue Jan 09 2018 baho-utot <baho-utot@columbus.rr.com> 4.0.1-1
 -	Initial build.	First version

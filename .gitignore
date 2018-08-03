@@ -1,3 +1,8 @@
-SOURCES/*.tar.*
-SOURCES/*.patch 
-WIP/*
+.directory
+INFO
+LOGS
+PROVIDES
+REQUIRES
+RPMS
+SRPMS
+FIRMWARE

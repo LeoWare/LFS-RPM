@@ -1,37 +1,39 @@
-Summary:	Programs to parse command-line options
+Summary:	The popt package contains the popt libraries which are used by some programs to parse command-line options.
 Name:		popt
 Version:	1.16
 Release:	1
-License:	GPLv1
+License:	GPL
 URL:		http://rpm5.org/files/popt
-Group:		Applications/System
-Vendor:		Bildanet
-Distribution:	Octothorpe
-Source:		ftp://anduin.linuxfromscratch.org/BLFS/svn/p/%{name}-%{version}.tar.gz
+Group:		BLFS/General_Libraries 
+Vendor:		Octothorpe
+Source0:	http://rpm5.org/files/popt/%{name}-%{version}.tar.gz
 %description
-The popt package contains the popt libraries which are used by
-some programs to parse command-line options.
+		The popt package contains the popt libraries which are used by some programs to parse command-line options.
 %prep
-%setup -q
+%setup -q -n %{name}-%{version}
 %build
-./configure \
-	--prefix=%{_prefix} \
-	--bindir=%{_bindir} \
-	--disable-silent-rules
-make %{?_smp_mflags}
+	./configure \
+		--prefix=%{_prefix} \
+		--disable-static
+	make %{?_smp_mflags}
 %install
-make DESTDIR=%{buildroot} install
-find %{buildroot} -name '*.la' -delete
-%find_lang %{name}
-%check
-make -k check |& tee %{_specdir}/%{name}-check-log || %{nocheck}
-%post	-p /sbin/ldconfig
-%postun	-p /sbin/ldconfig
-%files -f %{name}.lang
-%defattr(-,root,root)
-%{_includedir}/*
-%{_libdir}/*
-%{_mandir}/*/*
+	make DESTDIR=%{buildroot} install
+	#	install -v -m755 -d %{buildroot}/usr/share/doc/popt-1.16
+	#	install -v -m644 doxygen/html/* %{buildroot}/usr/share/doc/popt-1.16
+	#	Copy license/copying file
+	#	install -D -m644 LICENSE %{buildroot}/usr/share/licenses/%{name}/LICENSE
+	install -D -m644 COPYING %{buildroot}/usr/share/licenses/%{name}/LICENSE
+	#	Create file list
+#	rm  %{buildroot}%{_infodir}/dir
+	find %{buildroot} -name '*.la' -delete
+	find "${RPM_BUILD_ROOT}" -not -type d -print > filelist.rpm
+	sed -i "s|^${RPM_BUILD_ROOT}||" filelist.rpm
+	sed -i '/man\/man/d' filelist.rpm
+	sed -i '/\/usr\/share\/info/d' filelist.rpm
+%files -f filelist.rpm
+	%defattr(-,root,root)
+#	%%{_infodir}/*.gz
+	%{_mandir}/man3/*.gz
 %changelog
-*	Wed Jan 30 2013 baho-utot <baho-utot@columbus.rr.com> 1.16-1
--	Initial build.	First version	
+*	Mon Jan 01 2018 baho-utot <baho-utot@columbus.rr.com> 1.16-1
+-	LFS-8.1
