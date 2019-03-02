@@ -1,6 +1,6 @@
 #!/bin/bash
 #################################################
-# Title:    tools.sh    			            #
+# Title:    cross-tools.sh			            #
 # Date:     2019-03-01			                #
 # Version:	0.1			                     	#
 # Author:	<samuel@samuelraynor.com>	        #
@@ -15,7 +15,7 @@ source function.inc
 PRGNAME=${0##*/}	# script name minus the path
 LOGDIR="$LFS_TOP/$LOGDIR"
 #
-#	Main line
+#	Main line	
 #
 #msg "Building Chapter 5 Tool chain"
 [ "${LFS_USER}" != $(whoami) ] && die "Not lfs user: FAILURE"
@@ -23,25 +23,17 @@ LOGDIR="$LFS_TOP/$LOGDIR"
 [ "${LFS_TOP}" = $(pwd) ] && build2 "cd ${LFS_TOP}" "${LOGDIR}/toolchain.log"
 
 # execute all toolchain scripts
-for script in `find $LFS_TOP/scripts/{chroot,tools} -type f | sort`
+for script in `find $LFS_TOP/scripts/cross-tools -type f | sort`
 do
     cd $LFS_TOP/$BUILDDIR
 
     export PATH=$CROSS_TOOLS/bin:/bin:/usr/bin
     export LC_ALL=POSIX
 
-    export CC="${LFS_TARGET}-gcc ${BUILD64}"
-    export CXX="${LFS_TARGET}-g++ ${BUILD64}"
-    export AR="${LFS_TARGET}-ar"
-    export AS="${LFS_TARGET}-as"
-    export RANLIB="${LFS_TARGET}-ranlib"
-    export LD="${LFS_TARGET}-ld"
-    export STRIP="${LFS_TARGET}-strip"
-
     # execute the file
     TOPDIR=$LFS_TOP bash $script
 
 done
-exit 1
-touch "$LOGDIR/tools.completed"
+
+touch "$LOGDIR/cross-tools.completed"
 exit 0

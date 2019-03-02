@@ -1,0 +1,386 @@
+#!/bin/bash
+
+# Configuraton for CLFS
+
+#--- Set globals
+CONFIG_FILE='config.inc'
+
+#--- Set dialog defaults
+
+DIALOG_TITLE="Leoware Configuration"
+DIALOG_BACKTITLE="--backtitle \"${DIALOG_TITLE}\""
+
+
+#--- Set default configuration values
+
+# Mount point to build into
+# This should be the root of the new partition
+LFS=/mnt/leoware
+
+# Where to build the tool chain
+TOOLS=/tools
+CROSS_TOOLS=/cross-tools
+
+# Where the build system is installed
+# This directory is appended to $LFS
+_PARENT=/home/samuel/src/leoware
+HOST_TOP=$_PARENT
+LFS_TOP=$_PARENT
+
+# LFS user name
+# System will build with this user
+LFS_USER="leoware"
+USER=$LFS_USER
+
+LFS_PASSWORD=""
+ROOT_PASSWORD=""
+
+# Build host
+HOST_TRIPLET="$(uname -m)-pc-linux-gnu"
+
+# Compilation target
+LFS_TGT="$(uname -m)-lfs-linux-gnu"
+
+# Make flags
+MKFLAGS="-j $(getconf _NPROCESSORS_ONLN)"
+
+# Device to install GRUB
+DEVICE=/dev/sdc10
+
+# partition to mount to $LFS/boot
+BOOT_DEVICE=/dev/sdc10
+
+# Filesystem type
+FILESYSTEM=ext4
+
+# Name of the log file
+LOGFILE="$(date +%Y-%m-%d).log"
+
+# Directories
+SOURCESDIR="sources"
+BUILDDIR="build"
+LOGDIR="logs"
+
+
+#--- Read configuration file
+
+if [ -r $CONFIG_FILE ]; then
+	source config.inc
+fi
+
+
+#--- Use dialog to edit config
+
+
+#--- functions
+
+function dialog_get_input() {
+	local _outVar=$1
+	local _prompt=$2
+	local _default=$3
+	local _tmpfile="/tmp/$UID-menuconfig.tmp.$$"
+
+	exec 3>&1
+	local _value=`dialog --backtitle "$DIALOG_TITLE" \
+		--inputbox "$_prompt" 11 40 "$_default" \
+			2>&1 1>&3`
+	local _retval=$?
+	exec 3>&-
+	if [ "x$_value" == "x" ]; then
+		_value=$_default
+	fi
+	#_option=`cat $_tmpfile`
+	eval $_outVar="'$_value'"
+	return $_retval
+}
+
+function dialog_password_input() {
+	local _outVar=$1
+	local _prompt=$2
+	local _tmpfile="/tmp/$UID-menuconfig.tmp.$$"
+
+	exec 3>&1
+	local _value=`dialog --backtitle "$DIALOG_TITLE" \
+		--passwordbox "$_prompt" 11 40 "$_default" \
+			2>&1 1>&3`
+	local _retval=$?
+	exec 3>&-
+	#_option=`cat $_tmpfile`
+	eval $_outVar="'$_value'"
+	return $_retval
+}
+
+#-- Main menu
+function main_menu() {
+	local _retOpt=$1
+	local _tmpfile="/tmp/$UID-menuconfig.tmp.$$"
+
+	exec 3>&1
+	_option=`dialog --backtitle "$DIALOG_TITLE" \
+		--title "Main menu" \
+		--cancel-label "Exit" \
+		--column-separator "#" \
+		--extra-button --extra-label "Save" \
+		--menu "Choose an option:" 11 60 4 \
+			1 "Filesystem" \
+			2 "Build options" \
+			3 "User setup" \
+			4 "Boot options" \
+			2>&1 1>&3`
+	local _retval=$?
+	exec 3>&-
+	#_option=`cat $_tmpfile`
+	eval $_retOpt="'$_option'"
+	return $_retval
+}
+
+function menu_filesystem() {
+	local _retval=
+	local _option=
+
+	until [ $_retval -eq 1 ];
+	do
+		exec 3>&1
+		_option=`dialog --backtitle "$DIALOG_TITLE" \
+			--title "Filesystem options" \
+			--cancel-label "Back" \
+			--column-separator "#" \
+			--menu "Choose an option:" 13 60 5 \
+			1 "Build system top directory: Host#(HOST_TOP)" \
+			2 "Build system top directory: LFS#(LFS_TOP)" \
+			3 "LFS partition mount point#(LFS)" \
+			4 "Toolchain directory#(TOOLS)" \
+			5 "Cross-toolchain directory#(CROSS_TOOLS)" \
+			6 "LFS partition filesystem#(FILESYSTEM)" \
+			2>&1 1>&3`
+		_retval=$?
+		exec 3>&-
+
+		if [ $_retval -eq 0 ]; then
+			case $_option in
+				1)	
+					dialog_get_input HOST_TOP "Build system top directory: Host (HOST_TOP)" $HOST_TOP
+				;;
+				2)	
+					dialog_get_input LFS_TOP "Build system top directory: LFS (LFS_TOP)" $LFS_TOP
+				;;
+				3)	
+					dialog_get_input LFS "LFS partition mount point (LFS)" $LFS
+				;;
+				4)	
+					dialog_get_input TOOLS "Toolchain directory (TOOLS)" $TOOLS
+				;;
+				5)	
+					dialog_get_input CROSS_TOOLS "Cross-toolchain directory (CROSS_TOOLS)" $FILESYSTEM
+				;;
+				6)	
+					dialog_get_input FILESYSTEM "LFS partition filesystem (FILESYSTEM)" $FILESYSTEM
+				;;
+			esac
+		fi
+	done
+
+	return 0
+}
+
+function menu_build_options() {
+	local _retval=
+	local _option=
+
+	until [ $_retval -eq 1 ];
+	do
+		exec 3>&1
+		_option=`dialog --backtitle "$DIALOG_TITLE" \
+			--title "Build options" \
+			--cancel-label "Back" \
+			--column-separator "#" \
+			--menu "Choose an option:" 11 60 4 \
+			1 "Build host#(HOST_TRIPLET)" \
+			2 "Build target#(LFS_TGT)" \
+			3 "Make flags#(MKFLAGS)" \
+			2>&1 1>&3`
+		_retval=$?
+		exec 3>&-
+
+		if [ $_retval -eq 0 ]; then
+			case $_option in
+				1)	
+					dialog_get_input HOST_TRIPLET "Build host (HOST_TRIPLET)" $HOST_TRIPLET
+				;;
+				2)	
+					dialog_get_input LFS_TGT "Build target (LFS_TGT)" $LFS_TGT
+				;;
+				3)	
+					dialog_get_input MKFLAGS "Make flags (MKFLAGS)" $MKFLAGS
+				;;
+			esac
+		fi
+	done
+
+	return 0
+}
+
+function menu_user_setup() {
+	local _retval=
+	local _option=
+
+	until [ $_retval -eq 1 ];
+	do
+		exec 3>&1
+		_option=`dialog --backtitle "$DIALOG_TITLE" \
+			--title "User setup" \
+			--cancel-label "Back" \
+			--column-separator "#" \
+			--menu "Choose an option:" 11 60 4 \
+				1 "LFS user name#(LFS_USER)" \
+				2 "LFS user password#(LFS_PASSWORD)" \
+				3 "Root password#(ROOT_PASSWORD)" \
+				2>&1 1>&3`
+		local _retval=$?
+		exec 3>&-
+
+		if [ $_retval -eq 0 ]; then
+			case $_option in
+				1)	
+					dialog_get_input LFS_USER "LFS user name" $LFS_USER
+				;;
+				2)	
+					dialog_password_input LFS_PASSWORD "LFS password" ""
+				;;
+				3)	
+					dialog_password_input ROOT_PASSWORD "root password" ""
+				;;
+			esac
+		fi
+	done
+
+	return 0
+}
+
+function menu_boot_options() {
+	local _retval=
+	local _option=
+
+	until [ $_retval -eq 1 ];
+	do
+		exec 3>&1
+		_option=`dialog --backtitle "$DIALOG_TITLE" \
+			--title "Boot options" \
+			--cancel-label "Back" \
+			--column-separator "#" \
+			--menu "Choose an option:" 9 60 2\
+			1 "Partition to mount to \\$LFS#(DEVICE)" \
+			2 "Partition to mount to \\$LFS/boot#(BOOT_DEVICE)" \
+			2>&1 1>&3`
+		_retval=$?
+		exec 3>&-
+
+		if [ $_retval -eq 0 ]; then
+			case $_option in
+				1)	
+					dialog_get_input DEVICE "Partition to mount to \$LFS (DEVICE)" $DEVICE
+				;;
+				2)	
+					dialog_get_input BOOT_DEVICE "Partition to mount to \$LFS/boot (BOOT_DEVICE)" $BOOT_DEVICE
+				;;
+			esac
+		fi
+	done
+
+	return 0
+}
+
+
+
+
+# --- Start
+theOption=""
+exit=0
+
+until [ $exit -eq 1 ];
+do
+	main_menu theOption
+	retval=$?
+	#dialog --backtitle "$DIALOG_TITLE" \
+	#--pause "retval: $retval - option: $theOption" 10 30 1
+	case $retval in
+		1) # Exit button
+			exit=1 # request exit
+		;;
+		0) # OK button
+			case $theOption in
+				1)	# Filestystem
+					menu_filesystem
+				;;
+				2)
+					menu_build_options
+				;;
+				3)
+					menu_user_setup
+				;;
+				4)
+					menu_boot_options
+				;;
+			esac
+		;;
+		3) # Save button
+			dialog --backtitle "$DIALOG_TITLE" \
+					--infobox "Writing configuration file..." 3 33
+
+			# Write the config file in the current directory
+			
+			#if [ -d $HOST_TOP ]; then
+				cat > $CONFIG_FILE <<-EOF
+					# --- THIS FILE IS WAS GENERATED BY menuconfig --- #
+					# --- YOU CAN EDIT THIS FILE, BUT ANY CHANGES  --- #
+					# --- MADE TO ITEMS NOT CONFIGURED IN          --- #
+					# --- menuconfig WILL BE LOST IF A NEW CONFIG  --- #
+					# --- IS WRITTEN FROM WITHIN menuonfig         --- #
+
+					# Mount point to build into
+					# This should be the root of the new partition
+					LFS=$LFS
+					# Where to build the tool chain
+					TOOLS=$TOOLS
+					CROSS_TOOLS=$CROSS_TOOLS
+					# Where the build system is installed
+					# This directory is appended to $LFS
+					HOST_TOP="$HOST_TOP"
+					LFS_TOP="$LFS_TOP"
+					# LFS user name
+					# System will build with this user
+					LFS_USER="$LFS_USER"
+					LFS_PASSWORD="$LFS_PASSWORD"
+					ROOT_PASSWORD="$ROOT_PASSWORD"
+					# Build host
+					HOST_TRIPLET="$HOST_TRIPLET"
+					# Compilation target
+					LFS_TGT="$LFS_TGT"
+					# Make flags
+					MKFLAGS="$MKFLAGS"
+					# Device to install GRUB
+					DEVICE="$DEVICE"
+					# partition to mount to $LFS/boot
+					BOOT_DEVICE="$BOOT_DEVICE"
+					# Filesystem type
+					FILESYSTEM="$FILESYSTEM"
+					# --- END OF ITEMS CONFIGURED WITH menuconfig  --- #
+					# Name of the log file
+					LOGFILE=\$(date +%Y-%m-%d).log
+					# Directories
+					SOURCESDIR="$SOURCESDIR"
+					BUILDDIR="$BUILDDIR"
+					LOGDIR="$LOGSDIR"
+				EOF
+				sleep 1
+
+			#else
+			#	_notfound="Directory $HOST_TOP doesn't exist!"
+			#	dialog --backtitle "$DIALOG_TITLE" --infobox  "$_notfound" 3 $((${#_notfound}+4))
+			#	sleep 3
+			#fi
+		;;
+	esac
+done
+
+#--- Write configuration file
